@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive World Travel Map & Music</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- jsVectorMap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap/dist/css/jsvectormap.min.css" />
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            border-radius: 12px;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border: 1px solid #1e293b;
+        }
+
+        .jvm-region {
+            transition: fill 0.2s ease;
+        }
+
+        /* Modernes Styling für das jsVectorMap Hover-Tooltip */
+        .jvm-tooltip {
+            background-color: rgba(15, 23, 42, 0.95) !important;
+            color: #f8fafc !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 5) !important;
+            border: 1px solid #334155 !important;
+            font-family: inherit !important;
+            /* SEHR WICHTIG: Verhindert, dass das Tooltip den Klick auf das Land blockiert */
+            pointer-events: none !important; 
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 md:p-8 relative">
+
+    <header class="w-full max-w-6xl text-center mb-6">
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-slate-100 mb-2">Interactive World Map</h1>
+        <p class="text-sm md:text-base text-slate-400 mb-6">Hover over a country to see a preview. Click the country on the map to see the full photo and hear the anthem.</p>
+        
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-xl mx-auto mb-6">
+            <div class="relative w-full">
+                <input type="text" id="searchInput" placeholder="Search country name..." 
+                       class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-slate-100 border border-slate-700 focus:outline-none focus:border-blue-500 placeholder-slate-500 text-sm shadow-inner transition-colors">
+            </div>
+            <button id="clearSearch" class="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-sm rounded-lg border border-slate-700 transition-colors">
+                Clear
+            </button>
+        </div>
+
+        <!-- Audio Player UI -->
+        <div id="audioPlayer" class="hidden flex items-center justify-between bg-slate-800 border border-blue-500/30 p-3 rounded-lg max-w-md mx-auto shadow-lg mb-4">
+            <div class="flex items-center gap-3">
+                <span class="animate-pulse text-2xl">🎵</span>
+                <div class="text-left">
+                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Now Playing</p>
+                    <p id="audioTitle" class="text-sm text-blue-300 font-medium">National Anthem</p>
+                </div>
+            </div>
+            <button id="stopAudioBtn" class="ml-4 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-400 text-xs font-bold rounded border border-red-500/50 transition">
+                STOP
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-6xl flex-1 flex flex-col items-center">
+        <!-- Map Container -->
+        <div class="map-wrapper mb-8" id="world-map"></div>
+
+        <section class="w-full bg-slate-900 rounded-xl border border-slate-800 p-6 shadow-lg">
+            <h2 class="text-xl font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2">Country Directory</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6" id="countryDirectory">
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-2">North America</h3>
+                    <ul class="space-y-1 text-sm text-slate-300">
+                        <li><a href="#" data-country-id="CA" class="dir-item hover:text-blue-400 transition-colors">Canada</a></li>
+                        <li><a href="#" data-country-id="US" class="dir-item hover:text-blue-400 transition-colors">United States</a></li>
+                        <li><a href="#" data-country-id="MX" class="dir-item hover:text-blue-400 transition-colors">Mexico</a></li>
+                        <li><a href="#" data-country-id="GT" class="dir-item hover:text-blue-400 transition-colors">Guatemala</a></li>
+                        <li><a href="#" data-country-id="CU" class="dir-item hover:text-blue-400 transition-colors">Cuba</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-2">South America</h3>
+                    <ul class="space-y-1 text-sm text-slate-300">
+                        <li><a href="#" data-country-id="BR" class="dir-item hover:text-blue-400 transition-colors">Brazil</a></li>
+                        <li><a href="#" data-country-id="AR" class="dir-item hover:text-blue-400 transition-colors">Argentina</a></li>
+                        <li><a href="#" data-country-id="CL" class="dir-item hover:text-blue-400 transition-colors">Chile</a></li>
+                        <li><a href="#" data-country-id="CO" class="dir-item hover:text-blue-400 transition-colors">Colombia</a></li>
+                        <li><a href="#" data-country-id="PE" class="dir-item hover:text-blue-400 transition-colors">Peru</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-2">Europe</h3>
+                    <ul class="space-y-1 text-sm text-slate-300">
+                        <li><a href="#" data-country-id="GB" class="dir-item hover:text-blue-400 transition-colors">United Kingdom</a></li>
+                        <li><a href="#" data-country-id="FR" class="dir-item hover:text-blue-400 transition-colors">France</a></li>
+                        <li><a href="#" data-country-id="DE" class="dir-item hover:text-blue-400 transition-colors">Germany</a></li>
+                        <li><a href="#" data-country-id="ES" class="dir-item hover:text-blue-400 transition-colors">Spain</a></li>
+                        <li><a href="#" data-country-id="PT" class="dir-item hover:text-blue-400 transition-colors">Portugal</a></li>
+                        <li><a href="#" data-country-id="IT" class="dir-item hover:text-blue-400 transition-colors">Italy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-2">Africa</h3>
+                    <ul class="space-y-1 text-sm text-slate-300">
+                        <li><a href="#" data-country-id="EG" class="dir-item hover:text-blue-400 transition-colors">Egypt</a></li>
+                        <li><a href="#" data-country-id="ZA" class="dir-item hover:text-blue-400 transition-colors">South Africa</a></li>
+                        <li><a href="#" data-country-id="NG" class="dir-item hover:text-blue-400 transition-colors">Nigeria</a></li>
+                        <li><a href="#" data-country-id="KE" class="dir-item hover:text-blue-400 transition-colors">Kenya</a></li>
+                        <li><a href="#" data-country-id="MA" class="dir-item hover:text-blue-400 transition-colors">Morocco</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-2">Asia</h3>
+                    <ul class="space-y-1 text-sm text-slate-300">
+                        <li><a href="#" data-country-id="RU" class="dir-item hover:text-blue-400 transition-colors">Russia</a></li>
+                        <li><a href="#" data-country-id="CN" class="dir-item hover:text-blue-400 transition-colors">China</a></li>
+                        <li><a href="#" data-country-id="IN" class="dir-item hover:text-blue-400 transition-colors">India</a></li>
+                        <li><a href="#" data-country-id="JP" class="dir-item hover:text-blue-400 transition-colors">Japan</a></li>
+                        <li><a href="#" data-country-id="SA" class="dir-item hover:text-blue-400 transition-colors">Saudi Arabia</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-2">Oceania</h3>
+                    <ul class="space-y-1 text-sm text-slate-300">
+                        <li><a href="#" data-country-id="AU" class="dir-item hover:text-blue-400 transition-colors">Australia</a></li>
+                        <li><a href="#" data-country-id="NZ" class="dir-item hover:text-blue-400 transition-colors">New Zealand</a></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal (Pop-up für Klick) -->
+    <div id="imageModal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 transition-opacity">
+        <div class="relative max-w-4xl w-full bg-slate-800 rounded-xl shadow-2xl border border-slate-700 overflow-hidden">
+            <!-- Header -->
+            <div class="flex justify-between items-center p-4 border-b border-slate-700">
+                <h3 id="imageModalTitle" class="text-2xl font-bold text-slate-100">Ländername</h3>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <!-- Content -->
+            <div class="p-6 flex flex-col items-center bg-slate-900">
+                <img id="countryImage" src="" alt="Country Image" class="w-full max-h-[60vh] object-contain rounded-lg shadow-md mb-6 bg-black/50">
+                <button id="modalWikiBtn" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-lg transition-colors">
+                    Mehr auf Wikipedia lesen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jsVectorMap Scripte -->
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- DATABASES ---
+            const audioDatabase = {
+                'US': 'https://upload.wikimedia.org/wikipedia/commons/6/65/Star_Spangled_Banner_instrumental.ogg',
+                'CA': 'https://upload.wikimedia.org/wikipedia/commons/e/ea/O_Canada_-_U.S._Navy_Band.ogg',
+                'MX': 'https://upload.wikimedia.org/wikipedia/commons/c/c5/Himno_Nacional_Mexicano_instrumental.ogg',
+                'BR': 'https://upload.wikimedia.org/wikipedia/commons/8/8d/Hino_Nacional_Brasileiro_instrumental.ogg',
+                'AR': 'https://upload.wikimedia.org/wikipedia/commons/6/64/United_States_Navy_Band_-_Himno_Nacional_Argentino.ogg',
+                'GB': 'https://upload.wikimedia.org/wikipedia/commons/a/a2/United_States_Navy_Band_-_God_Save_the_King.ogg',
+                'FR': 'https://upload.wikimedia.org/wikipedia/commons/3/30/La_Marseillaise.ogg',
+                'DE': 'https://upload.wikimedia.org/wikipedia/commons/a/a6/German_national_anthem_performed_by_the_US_Navy_Band.ogg',
+                'IT': 'https://upload.wikimedia.org/wikipedia/commons/3/30/Inno_di_Mameli_instrumental.ogg',
+                'ES': 'https://upload.wikimedia.org/wikipedia/commons/1/15/Marcha_Real-navy_band.ogg',
+                'RU': 'https://upload.wikimedia.org/wikipedia/commons/4/41/National_Anthem_of_Russia_instrumental.ogg',
+                'CN': 'https://upload.wikimedia.org/wikipedia/commons/c/ca/March_of_the_Volunteers_instrumental.ogg',
+                'IN': 'https://upload.wikimedia.org/wikipedia/commons/9/94/Jana_Gana_Mana_instrumental.ogg',
+                'JP': 'https://upload.wikimedia.org/wikipedia/commons/a/a3/Kimi_ga_Yo_instrumental.ogg',
+                'AU': 'https://upload.wikimedia.org/wikipedia/commons/3/31/Advance_Australia_Fair_instrumental.ogg',
+                'ZA': 'https://upload.wikimedia.org/wikipedia/commons/5/52/National_Anthem_of_South_Africa.ogg'
+            };
+
+            const imageDatabase = {
+                'JP': 'images/japan001.jpg' // <-- Hier das Bild für Japan
+            };
+
+            // --- AUDIO LOGIC ---
+            let currentAudio = null;
+            const audioPlayer = document.getElementById('audioPlayer');
+            const audioTitle = document.getElementById('audioTitle');
+            const stopAudioBtn = document.getElementById('stopAudioBtn');
+
+            function playMusic(code, countryName) {
+                const safeCode = String(code).toUpperCase(); // Sicherstellen, dass Code großgeschrieben ist
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                }
+
+                if (audioDatabase[safeCode]) {
+                    currentAudio = new Audio(audioDatabase[safeCode]);
+                    currentAudio.volume = 0.5;
+                    currentAudio.play().catch(err => console.log("Autoplay blocked:", err));
+                    
+                    audioTitle.textContent = "Hymne: " + countryName;
+                    audioPlayer.classList.remove('hidden');
+                } else {
+                    audioPlayer.classList.add('hidden');
+                }
+            }
+
+            stopAudioBtn.addEventListener('click', () => {
+                if (currentAudio) currentAudio.pause();
+                audioPlayer.classList.add('hidden');
+            });
+
+            function openWiki(countryName) {
+                const url = `https://de.wikipedia.org/wiki/${encodeURIComponent(countryName)}`;
+                window.open(url, '_blank');
+            }
+
+
+            // --- MODAL LOGIC (ON CLICK) ---
+            const imageModal = document.getElementById('imageModal');
+            const imageModalTitle = document.getElementById('imageModalTitle');
+            const countryImage = document.getElementById('countryImage');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const modalWikiBtn = document.getElementById('modalWikiBtn');
+            let currentCountryWiki = "";
+
+            function handleCountryClick(code, countryName) {
+                const safeCode = String(code).toUpperCase(); // IMMER Großbuchstaben erzwingen!
+                playMusic(safeCode, countryName);
+                currentCountryWiki = countryName;
+
+                if (imageDatabase[safeCode]) {
+                    // Bild vorhanden -> Zeige Popup an!
+                    imageModalTitle.textContent = countryName;
+                    countryImage.src = imageDatabase[safeCode];
+                    countryImage.alt = "Foto von " + countryName;
+                    imageModal.classList.remove('hidden');
+                } else {
+                    // Kein Bild vorhanden -> Öffne Wikipedia
+                    openWiki(countryName);
+                }
+            }
+
+            closeModalBtn.addEventListener('click', () => {
+                imageModal.classList.add('hidden');
+            });
+
+            imageModal.addEventListener('click', (e) => {
+                if(e.target === imageModal) {
+                    imageModal.classList.add('hidden');
+                }
+            });
+
+            modalWikiBtn.addEventListener('click', () => {
+                openWiki(currentCountryWiki);
+            });
+
+
+            // --- MAP INITIALIZATION ---
+            const map = new jsVectorMap({
+                selector: '#world-map',
+                map: 'world',
+                backgroundColor: 'transparent',
+                regionStyle: {
+                    initial: {
+                        fill: '#334155',
+                        stroke: '#475569',
+                        strokeWidth: 0.5,
+                        fillOpacity: 1
+                    },
+                    hover: {
+                        fill: '#3b82f6',
+                        fillOpacity: 1
+                    },
+                    selected: {
+                        fill: '#eab308'
+                    }
+                },
+                // HOVER TOOLTIP LOGIC
+                onRegionTooltipShow: function(event, tooltip, code) {
+                    const safeCode = String(code).toUpperCase();
+                    const countryName = map.getRegionName(code);
+                    
+                    if (imageDatabase[safeCode]) {
+                        tooltip.getElement().innerHTML = `
+                            <div class="flex flex-col items-center">
+                                <span class="font-bold text-base mb-2">${countryName}</span>
+                                <img src="${imageDatabase[safeCode]}" 
+                                     alt="${countryName}" 
+                                     class="w-48 h-auto rounded shadow border border-slate-600 bg-black/50">
+                            </div>
+                        `;
+                    } else {
+                        tooltip.getElement().innerHTML = `
+                            <div class="font-bold px-1">${countryName}</div>
+                        `;
+                    }
+                },
+                // CLICK LOGIC AUF DER KARTE
+                onRegionClick: function(event, code) {
+                    const safeCode = String(code).toUpperCase();
+                    const countryName = map.getRegionName(code);
+                    // Ruft die Funktion auf, die prüft ob ein Bild da ist und dann das Modal öffnet
+                    handleCountryClick(safeCode, countryName); 
+                }
+            });
+
+            // --- DIRECTORY LIST LOGIC ---
+            const dirItems = document.querySelectorAll('.dir-item');
+            dirItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const code = item.getAttribute('data-country-id');
+                    const countryName = item.textContent;
+                    
+                    map.clearSelectedRegions();
+                    map.setSelectedRegions([code]);
+                    
+                    handleCountryClick(code, countryName);
+                });
+
+                item.addEventListener('mouseenter', () => {
+                    const code = item.getAttribute('data-country-id');
+                    map.setSelectedRegions([code]);
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    const code = item.getAttribute('data-country-id');
+                    if (!document.getElementById('searchInput').value) {
+                        map.clearSelectedRegions();
+                    }
+                });
+            });
+
+            // --- SEARCH FILTER ---
+            const searchInput = document.getElementById('searchInput');
+            const clearSearchBtn = document.getElementById('clearSearch');
+
+            function applySearchFilter() {
+                const query = searchInput.value.toLowerCase().trim();
+                map.clearSelectedRegions();
+
+                if (!query) return;
+
+                const regions = map.regions;
+                const matchedCodes = [];
+                
+                for (const code in regions) {
+                    const name = regions[code].config.name.toLowerCase();
+                    if (name.includes(query)) {
+                        matchedCodes.push(code);
+                    }
+                }
+                
+                map.setSelectedRegions(matchedCodes);
+            }
+
+            searchInput.addEventListener('input', applySearchFilter);
+            
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                map.clearSelectedRegions();
+            });
+        });
+    </script>
+</body>
+</html>
