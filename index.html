@@ -34,16 +34,14 @@
             transition: fill 0.2s ease;
         }
 
-        /* Modernes Styling für das jsVectorMap Hover-Tooltip */
         .jvm-tooltip {
             background-color: rgba(15, 23, 42, 0.95) !important;
             color: #f8fafc !important;
             border-radius: 8px !important;
             padding: 10px !important;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 5) !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
             border: 1px solid #334155 !important;
             font-family: inherit !important;
-            /* SEHR WICHTIG: Verhindert, dass das Tooltip den Klick auf das Land blockiert */
             pointer-events: none !important; 
             z-index: 1001;
         }
@@ -53,7 +51,7 @@
 
     <header class="w-full max-w-6xl text-center mb-6">
         <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-slate-100 mb-2">Interactive World Map</h1>
-        <p class="text-sm md:text-base text-slate-400 mb-6">Hover over a country to see a preview. Click the country on the map to see the full photo and hear the anthem.</p>
+        <p class="text-sm md:text-base text-slate-400 mb-6">Hover over a country to see a preview. Click the country to see the full photo and hear the anthem.</p>
         
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-xl mx-auto mb-6">
             <div class="relative w-full">
@@ -150,12 +148,12 @@
         </section>
     </main>
 
-    <!-- Modal (Pop-up für Klick) -->
+    <!-- Modal (Pop-up) -->
     <div id="imageModal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 transition-opacity">
         <div class="relative max-w-4xl w-full bg-slate-800 rounded-xl shadow-2xl border border-slate-700 overflow-hidden">
             <!-- Header -->
             <div class="flex justify-between items-center p-4 border-b border-slate-700">
-                <h3 id="imageModalTitle" class="text-2xl font-bold text-slate-100">Ländername</h3>
+                <h3 id="imageModalTitle" class="text-2xl font-bold text-slate-100">Country Name</h3>
                 <button id="closeModalBtn" class="text-slate-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             <!-- Content -->
@@ -175,7 +173,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            // --- DATABASES ---
+            // --- DATENBANKEN ---
             const audioDatabase = {
                 'US': 'https://upload.wikimedia.org/wikipedia/commons/6/65/Star_Spangled_Banner_instrumental.ogg',
                 'CA': 'https://upload.wikimedia.org/wikipedia/commons/e/ea/O_Canada_-_U.S._Navy_Band.ogg',
@@ -196,26 +194,24 @@
             };
 
             const imageDatabase = {
-                'JP': 'images/japan001.jpg' // <-- Hier das Bild für Japan
+                'JP': 'images/japan001.jpg' // <-- Dein lokales Bild
             };
 
-            // --- AUDIO LOGIC ---
+            // --- AUDIO LOGIK ---
             let currentAudio = null;
             const audioPlayer = document.getElementById('audioPlayer');
             const audioTitle = document.getElementById('audioTitle');
             const stopAudioBtn = document.getElementById('stopAudioBtn');
 
             function playMusic(code, countryName) {
-                const safeCode = String(code).toUpperCase(); // Sicherstellen, dass Code großgeschrieben ist
                 if (currentAudio) {
                     currentAudio.pause();
                     currentAudio.currentTime = 0;
                 }
-
-                if (audioDatabase[safeCode]) {
-                    currentAudio = new Audio(audioDatabase[safeCode]);
+                if (audioDatabase[code]) {
+                    currentAudio = new Audio(audioDatabase[code]);
                     currentAudio.volume = 0.5;
-                    currentAudio.play().catch(err => console.log("Autoplay blocked:", err));
+                    currentAudio.play().catch(err => console.log("Audio blockiert:", err));
                     
                     audioTitle.textContent = "Hymne: " + countryName;
                     audioPlayer.classList.remove('hidden');
@@ -235,7 +231,7 @@
             }
 
 
-            // --- MODAL LOGIC (ON CLICK) ---
+            // --- MODAL (POP-UP) LOGIK ---
             const imageModal = document.getElementById('imageModal');
             const imageModalTitle = document.getElementById('imageModalTitle');
             const countryImage = document.getElementById('countryImage');
@@ -244,97 +240,70 @@
             let currentCountryWiki = "";
 
             function handleCountryClick(code, countryName) {
-                const safeCode = String(code).toUpperCase(); // IMMER Großbuchstaben erzwingen!
-                playMusic(safeCode, countryName);
+                playMusic(code, countryName);
                 currentCountryWiki = countryName;
 
-                if (imageDatabase[safeCode]) {
-                    // Bild vorhanden -> Zeige Popup an!
+                if (imageDatabase[code]) {
                     imageModalTitle.textContent = countryName;
-                    countryImage.src = imageDatabase[safeCode];
+                    countryImage.src = imageDatabase[code];
                     countryImage.alt = "Foto von " + countryName;
                     imageModal.classList.remove('hidden');
                 } else {
-                    // Kein Bild vorhanden -> Öffne Wikipedia
                     openWiki(countryName);
                 }
             }
 
-            closeModalBtn.addEventListener('click', () => {
-                imageModal.classList.add('hidden');
-            });
-
+            closeModalBtn.addEventListener('click', () => imageModal.classList.add('hidden'));
             imageModal.addEventListener('click', (e) => {
-                if(e.target === imageModal) {
-                    imageModal.classList.add('hidden');
-                }
+                if(e.target === imageModal) imageModal.classList.add('hidden');
             });
-
-            modalWikiBtn.addEventListener('click', () => {
-                openWiki(currentCountryWiki);
-            });
+            modalWikiBtn.addEventListener('click', () => openWiki(currentCountryWiki));
 
 
-            // --- MAP INITIALIZATION ---
+            // --- KARTEN INITIALISIERUNG ---
             const map = new jsVectorMap({
                 selector: '#world-map',
                 map: 'world',
                 backgroundColor: 'transparent',
                 regionStyle: {
-                    initial: {
-                        fill: '#334155',
-                        stroke: '#475569',
-                        strokeWidth: 0.5,
-                        fillOpacity: 1
-                    },
-                    hover: {
-                        fill: '#3b82f6',
-                        fillOpacity: 1
-                    },
-                    selected: {
-                        fill: '#eab308'
-                    }
+                    initial: { fill: '#334155', stroke: '#475569', strokeWidth: 0.5, fillOpacity: 1 },
+                    hover: { fill: '#3b82f6', fillOpacity: 1 },
+                    selected: { fill: '#eab308' }
                 },
-                // HOVER TOOLTIP LOGIC
                 onRegionTooltipShow: function(event, tooltip, code) {
                     const safeCode = String(code).toUpperCase();
-                    const countryName = map.getRegionName(code);
+                    // Auslesen des Namens aus dem internen Objekt um Abstürze zu verhindern
+                    const countryName = map.regions && map.regions[code] ? map.regions[code].config.name : safeCode;
                     
                     if (imageDatabase[safeCode]) {
+                        // Verwendet saubere Backticks für den HTML String
                         tooltip.getElement().innerHTML = `
                             <div class="flex flex-col items-center">
-                                <span class="font-bold text-base mb-2">${countryName}</span>
-                                <img src="${imageDatabase[safeCode]}" 
-                                     alt="${countryName}" 
-                                     class="w-48 h-auto rounded shadow border border-slate-600 bg-black/50">
+                                <span class="font-bold text-base mb-2">` + countryName + `</span>
+                                <img src="` + imageDatabase[safeCode] + `" alt="` + countryName + `" class="w-48 h-auto rounded shadow border border-slate-600 bg-black/50">
                             </div>
                         `;
                     } else {
-                        tooltip.getElement().innerHTML = `
-                            <div class="font-bold px-1">${countryName}</div>
-                        `;
+                        tooltip.getElement().innerHTML = `<div class="font-bold px-1">` + countryName + `</div>`;
                     }
                 },
-                // CLICK LOGIC AUF DER KARTE
                 onRegionClick: function(event, code) {
                     const safeCode = String(code).toUpperCase();
-                    const countryName = map.getRegionName(code);
-                    // Ruft die Funktion auf, die prüft ob ein Bild da ist und dann das Modal öffnet
+                    const countryName = map.regions && map.regions[code] ? map.regions[code].config.name : safeCode;
                     handleCountryClick(safeCode, countryName); 
                 }
             });
 
-            // --- DIRECTORY LIST LOGIC ---
+            // --- LISTEN (DIRECTORY) LOGIK ---
             const dirItems = document.querySelectorAll('.dir-item');
             dirItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const code = item.getAttribute('data-country-id');
+                    const code = item.getAttribute('data-country-id').toUpperCase();
                     const countryName = item.textContent;
                     
                     map.clearSelectedRegions();
                     map.setSelectedRegions([code]);
-                    
                     handleCountryClick(code, countryName);
                 });
 
@@ -344,38 +313,30 @@
                 });
 
                 item.addEventListener('mouseleave', () => {
-                    const code = item.getAttribute('data-country-id');
                     if (!document.getElementById('searchInput').value) {
                         map.clearSelectedRegions();
                     }
                 });
             });
 
-            // --- SEARCH FILTER ---
+            // --- SUCHE ---
             const searchInput = document.getElementById('searchInput');
             const clearSearchBtn = document.getElementById('clearSearch');
 
             function applySearchFilter() {
                 const query = searchInput.value.toLowerCase().trim();
                 map.clearSelectedRegions();
-
                 if (!query) return;
 
-                const regions = map.regions;
                 const matchedCodes = [];
-                
-                for (const code in regions) {
-                    const name = regions[code].config.name.toLowerCase();
-                    if (name.includes(query)) {
-                        matchedCodes.push(code);
-                    }
+                for (const code in map.regions) {
+                    const name = map.regions[code].config.name.toLowerCase();
+                    if (name.includes(query)) matchedCodes.push(code);
                 }
-                
                 map.setSelectedRegions(matchedCodes);
             }
 
             searchInput.addEventListener('input', applySearchFilter);
-            
             clearSearchBtn.addEventListener('click', () => {
                 searchInput.value = '';
                 map.clearSelectedRegions();
